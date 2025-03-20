@@ -38,6 +38,5 @@ urlpatterns = [
     path('api/delete-student/<int:pk>/', views.delete_student, name='delete_student'),
     path('api/login/', superuser_login, name='superuser_login'),  # ✅ Superuser login
     path('api/complete-quiz/', complete_quiz, name='complete_quiz'), 
-    path('compile/', compile_code, name='compile_code'),
-
+    path('compile/', compile_code, name='compile_code'),  
 ]

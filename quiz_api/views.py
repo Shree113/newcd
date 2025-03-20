@@ -145,6 +145,16 @@ def complete_quiz(request):
     return Response({"message": "Quiz completed and email sent!"}, status=status.HTTP_200_OK)
 
 
+# Add this import at the top with your other imports
+import subprocess
+import tempfile
+import os
+from rest_framework.decorators import api_view
+from rest_framework.response import Response
+from rest_framework import status
+import json
+
+# Add this new view function
 @api_view(['POST'])
 def compile_code(request):
     """
