@@ -3,29 +3,36 @@ from django.contrib.auth import authenticate
 from django.contrib.auth.models import User
 from django.http import JsonResponse
 from rest_framework.authtoken.models import Token
-from django.core.mail import send_mail
+from django.views.decorators.csrf import csrf_exempt
 from django.conf import settings
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.decorators import api_view
 from django.shortcuts import get_object_or_404
-
+import json
+from django.utils.decorators import method_decorator
 from .models import Student, Question, StudentAnswer
 from .serializers import StudentSerializer, QuestionSerializer, StudentAnswerSerializer
 
 logger = logging.getLogger(__name__)
 
 
-@api_view(['POST'])
+@csrf_exempt  # ✅ Disable CSRF for this API (ONLY if needed)
 def create_student(request):
-    """
-    Create a new student entry.
-    """
-    serializer = StudentSerializer(data=request.data)
-    if serializer.is_valid():
-        serializer.save()
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
-    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    if request.method == "POST":
+        try:
+            data = json.loads(request.body)  # ✅ Ensure JSON is parsed
+            student = Student.objects.create(
+                name=data["name"],
+                email=data["email"],
+                department=data["department"],
+                college=data["college"],
+                year=data["year"]
+            )
+            return JsonResponse({"id": student.id, "message": "Student created successfully"}, status=201)
+        except Exception as e:
+            return JsonResponse({"error": str(e)}, status=400)
+    return JsonResponse({"error": "Invalid request method"}, status=405)
 
 @api_view(['POST'])
 def superuser_login(request):
