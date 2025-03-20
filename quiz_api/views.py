@@ -206,68 +206,63 @@ def get_file_extension(language):
 def run_code(file_path, language):
     try:
         if language == 'java':
-            # Create a dedicated directory for Java compilation
+            # Create a dedicated directory for Java files
             temp_dir = tempfile.mkdtemp()
-            java_file_path = os.path.join(temp_dir, 'Solution.java')
             
-            # Copy code to the new file
-            with open(file_path, 'r') as source, open(java_file_path, 'w') as target:
-                target.write(source.read())
-            
-            # Compile with more options for advanced features
-            compile_command = [
-                'javac',
-                '-encoding', 'UTF-8',
-                '-Xlint:all',
-                '-g',  # Include debugging information
-                java_file_path
-            ]
-            
-            compile_result = subprocess.run(
-                compile_command,
-                capture_output=True,
-                text=True,
-                timeout=20
-            )
-            
-            if compile_result.returncode != 0:
-                return f"Compilation Error:\n{compile_result.stderr}"
-            
-            # Run Java with increased memory and stack size
-            run_command = [
-                'java',
-                '-Xmx512m',  # Maximum heap size
-                '-Xss256m',  # Stack size
-                '-ea',  # Enable assertions
-                '-cp', temp_dir,
-                'Solution'  # Main class name
-            ]
-            
-            result = subprocess.run(
-                run_command,
-                capture_output=True,
-                text=True,
-                timeout=30  # Increased timeout for complex programs
-            )
-            
-            # Clean up
+            # Use jdk.tools API for compilation
             try:
-                shutil.rmtree(temp_dir)
-            except:
-                pass
+                from jdk.tools.jshell import JShell
+                jshell = JShell.create()
+                
+                # Read the Java code
+                with open(file_path, 'r') as file:
+                    code = file.read()
+                
+                # Execute the code using JShell
+                result = jshell.eval(code)
+                output = ""
+                
+                # Process the results
+                for event in result:
+                    if event.value() is not None:
+                        output += str(event.value()) + "\n"
+                
+                jshell.close()
+                return output
+                
+            except ImportError:
+                # Fallback to using Java Runtime
+                java_file_path = os.path.join(temp_dir, 'Solution.java')
+                class_file_path = os.path.join(temp_dir, 'Solution.class')
+                
+                with open(file_path, 'r') as source, open(java_file_path, 'w') as target:
+                    target.write(source.read())
+                
+                # Use Java Runtime directly
+                java_home = os.environ.get('JAVA_HOME')
+                if java_home:
+                    rt_jar = os.path.join(java_home, 'lib', 'rt.jar')
+                    if os.path.exists(rt_jar):
+                        classpath = f"{rt_jar};{temp_dir}"
+                        
+                        result = subprocess.run(
+                            ['java', '-cp', classpath, 'Solution'],
+                            capture_output=True,
+                            text=True,
+                            timeout=30
+                        )
+                        
+                        return result.stdout if result.returncode == 0 else f"Error:\n{result.stderr}"
+                
+                return "Error: Java Runtime not found. Please ensure Java is properly installed."
             
-            # Process output
-            output = result.stdout
-            if result.returncode != 0:
-                if "java.lang.OutOfMemoryError" in result.stderr:
-                    return "Error: Program exceeded memory limit"
-                elif "java.lang.StackOverflowError" in result.stderr:
-                    return "Error: Stack overflow - check for infinite recursion"
-                else:
-                    output += f"\nError (exit code {result.returncode}):\n{result.stderr}"
-            
-            return output
-            
+            finally:
+                # Clean up
+                try:
+                    shutil.rmtree(temp_dir)
+                except:
+                    pass
+        
         elif language == 'python':
             # Run Python code
             result = subprocess.run(['python', file_path], 
