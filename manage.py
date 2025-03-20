@@ -19,4 +19,11 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    if 'backup' in sys.argv:
+        from manage_db import backup_database
+        backup_database()
+    elif 'restore' in sys.argv:
+        from manage_db import restore_database
+        restore_database()
+    else:
+        main()
