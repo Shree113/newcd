@@ -214,6 +214,12 @@ def run_code(file_path, language):
                                    timeout=10)
             
         elif language == 'java':
+            # Check if javac is installed
+            try:
+                subprocess.run(['javac', '-version'], capture_output=True, check=True)
+            except (subprocess.SubprocessError, FileNotFoundError):
+                return "Error: Java compiler (javac) is not installed on the server. Please try Python code instead."
+            
             # For Java, we need to extract the class name and compile first
             class_name = extract_java_class_name(file_path)
             compile_result = subprocess.run(['javac', file_path], 
@@ -232,6 +238,12 @@ def run_code(file_path, language):
                                    timeout=10)
             
         elif language == 'c':
+            # Check if gcc is installed
+            try:
+                subprocess.run(['gcc', '--version'], capture_output=True, check=True)
+            except (subprocess.SubprocessError, FileNotFoundError):
+                return "Error: C compiler (gcc) is not installed on the server. Please try Python code instead."
+                
             # Compile C code
             output_path = file_path.replace('.c', '.exe')
             compile_result = subprocess.run(['gcc', file_path, '-o', output_path], 
