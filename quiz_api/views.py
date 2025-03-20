@@ -204,9 +204,71 @@ def get_file_extension(language):
     return extensions.get(language, '.txt')
 
 def run_code(file_path, language):
-    """Run the code and return the output"""
     try:
-        if language == 'python':
+        if language == 'java':
+            # Create a dedicated directory for Java compilation
+            temp_dir = tempfile.mkdtemp()
+            java_file_path = os.path.join(temp_dir, 'Solution.java')
+            
+            # Copy code to the new file
+            with open(file_path, 'r') as source, open(java_file_path, 'w') as target:
+                target.write(source.read())
+            
+            # Compile with more options for advanced features
+            compile_command = [
+                'javac',
+                '-encoding', 'UTF-8',
+                '-Xlint:all',
+                '-g',  # Include debugging information
+                java_file_path
+            ]
+            
+            compile_result = subprocess.run(
+                compile_command,
+                capture_output=True,
+                text=True,
+                timeout=20
+            )
+            
+            if compile_result.returncode != 0:
+                return f"Compilation Error:\n{compile_result.stderr}"
+            
+            # Run Java with increased memory and stack size
+            run_command = [
+                'java',
+                '-Xmx512m',  # Maximum heap size
+                '-Xss256m',  # Stack size
+                '-ea',  # Enable assertions
+                '-cp', temp_dir,
+                'Solution'  # Main class name
+            ]
+            
+            result = subprocess.run(
+                run_command,
+                capture_output=True,
+                text=True,
+                timeout=30  # Increased timeout for complex programs
+            )
+            
+            # Clean up
+            try:
+                shutil.rmtree(temp_dir)
+            except:
+                pass
+            
+            # Process output
+            output = result.stdout
+            if result.returncode != 0:
+                if "java.lang.OutOfMemoryError" in result.stderr:
+                    return "Error: Program exceeded memory limit"
+                elif "java.lang.StackOverflowError" in result.stderr:
+                    return "Error: Stack overflow - check for infinite recursion"
+                else:
+                    output += f"\nError (exit code {result.returncode}):\n{result.stderr}"
+            
+            return output
+            
+        elif language == 'python':
             # Run Python code
             result = subprocess.run(['python', file_path], 
                                    capture_output=True, 
@@ -276,7 +338,7 @@ def run_code(file_path, language):
         return output
     
     except subprocess.TimeoutExpired:
-        return "Execution timed out (limit: 10 seconds)"
+        return "Execution timed out (limit: 30 seconds)"
     except Exception as e:
         return f"Execution error: {str(e)}"
 
@@ -285,9 +347,12 @@ def extract_java_class_name(file_path):
     with open(file_path, 'r') as file:
         content = file.read()
     
-    # Simple regex to find the class name
+    # Enhanced regex to handle more complex class declarations
     import re
-    match = re.search(r'public\s+class\s+(\w+)', content)
+    # Look for public class with optional generic types and annotations
+    pattern = r'public\s+class\s+(\w+)(?:<[^>]+>)?\s*(?:extends\s+\w+(?:<[^>]+>)?)?\s*(?:implements\s+(?:\w+(?:<[^>]+>)?(?:\s*,\s*\w+(?:<[^>]+>)?)*))?\s*{'
+    match = re.search(pattern, content)
+    
     if match:
         return match.group(1)
-    return "Main"  # Default class name
+    return "Solution"  # Default class name
