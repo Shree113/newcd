@@ -33,9 +33,12 @@ INSTALLED_APPS = [
 
 # Update CORS settings
 CORS_ALLOWED_ORIGINS = [
-    "http://localhost:5173",
-    "https://quiz-frontend-codeverse.vercel.app",  # Your Vercel domain will go here
+    "https://new-fd.vercel.app",  # ✅ Your frontend URL
 ]
+
+CORS_ALLOW_METHODS = ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
+
+CORS_ALLOW_HEADERS = ["*"]
 
 CORS_ALLOW_CREDENTIALS = True
 
