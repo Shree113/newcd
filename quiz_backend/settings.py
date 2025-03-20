@@ -127,6 +127,22 @@ if 'DATABASE_URL' in os.environ:
         conn_max_age=600,
         conn_health_checks=True,
     )
+    # Force database reset on deployment while preserving superuser
+    if os.environ.get('FORCE_DB_RESET', 'False').lower() == 'true':
+        import sys
+        if 'migrate' in sys.argv:
+            from django.contrib.auth.models import User
+            from django.core.management.commands import flush
+            # Backup superuser
+            superusers = list(User.objects.filter(is_superuser=True).values())
+            flush.Command().handle()
+            # Restore superuser
+            for user in superusers:
+                User.objects.create_superuser(
+                    username=user['username'],
+                    email=user['email'],
+                    password=user['password']
+                )
 
 # Static files configuration
 STATIC_URL = '/static/'
