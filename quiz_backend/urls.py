@@ -29,7 +29,7 @@ urlpatterns = [
 
     path('admin/', login_required(admin.site.admin_view(admin.site.index))),
     # Our API endpoints:
-    path('api/student/', views.create_student, name='create_student'),
+    path('api/students/', views.create_student, name='create_student'),
     path('api/questions/', views.get_questions, name='get_questions'),
     path('api/submit-answer/', views.submit_answer, name='submit_answer'),
     path('api/leaderboard/', views.leaderboard, name='leaderboard'),
