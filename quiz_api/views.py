@@ -214,10 +214,25 @@ def run_code(file_path, language):
             with open(file_path, 'r') as source, open(java_file_path, 'w') as target:
                 target.write(source.read())
             
-            # Run Java directly using the java command
+            # Use absolute path to Java
+            java_path = r"C:\Program Files\Microsoft\jdk-17.0.9.8-hotspot\bin\java.exe"
+            javac_path = r"C:\Program Files\Microsoft\jdk-17.0.9.8-hotspot\bin\javac.exe"
+            
+            # Compile Java code
             try:
+                compile_result = subprocess.run(
+                    [javac_path, java_file_path],
+                    capture_output=True,
+                    text=True,
+                    timeout=30
+                )
+                
+                if compile_result.returncode != 0:
+                    return f"Compilation Error:\n{compile_result.stderr}"
+                
+                # Run the compiled class
                 result = subprocess.run(
-                    ['java', java_file_path],
+                    [java_path, '-cp', temp_dir, 'Solution'],
                     capture_output=True,
                     text=True,
                     timeout=30
@@ -230,7 +245,7 @@ def run_code(file_path, language):
                 return output
                 
             except FileNotFoundError:
-                return "Error: Java is not installed or not in system PATH. Please install Java to run Java code."
+                return "Error: Java installation not found at expected location. Please verify Java installation."
             finally:
                 # Clean up
                 try:
