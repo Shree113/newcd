@@ -17,10 +17,9 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path, include
 from django.http import HttpResponse
-from quiz_api.views import complete_quiz, superuser_login
+from quiz_api.views import complete_quiz, superuser_login, compile_code
 from django.contrib.auth.decorators import login_required
 from quiz_api import views
-from .views import compile_code
 
 
 def home(request):
@@ -38,5 +37,5 @@ urlpatterns = [
     path('api/delete-student/<int:pk>/', views.delete_student, name='delete_student'),
     path('api/login/', superuser_login, name='superuser_login'),  # ✅ Superuser login
     path('api/complete-quiz/', complete_quiz, name='complete_quiz'), 
-    path('compile/', compile_code, name='compile_code'),  
+    path('api/compile/', compile_code, name='compile_code'),  
 ]
