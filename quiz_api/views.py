@@ -143,3 +143,122 @@ def complete_quiz(request):
                         status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     return Response({"message": "Quiz completed and email sent!"}, status=status.HTTP_200_OK)
+
+
+@api_view(['POST'])
+def compile_code(request):
+    """
+    Compile and run code in various languages
+    """
+    try:
+        data = json.loads(request.body)
+        code = data.get('code', '')
+        language = data.get('language', 'python')
+        
+        if not code:
+            return Response({'error': 'No code provided'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Create a temporary file for the code
+        with tempfile.NamedTemporaryFile(suffix=get_file_extension(language), delete=False) as temp_file:
+            temp_file.write(code.encode())
+            temp_file_path = temp_file.name
+        
+        # Compile and run the code
+        result = run_code(temp_file_path, language)
+        
+        # Clean up the temporary file
+        try:
+            os.unlink(temp_file_path)
+        except:
+            pass
+        
+        return Response({'output': result})
+    
+    except Exception as e:
+        return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+def get_file_extension(language):
+    """Get the appropriate file extension for the language"""
+    extensions = {
+        'python': '.py',
+        'java': '.java',
+        'c': '.c'
+    }
+    return extensions.get(language, '.txt')
+
+def run_code(file_path, language):
+    """Run the code and return the output"""
+    try:
+        if language == 'python':
+            # Run Python code
+            result = subprocess.run(['python', file_path], 
+                                   capture_output=True, 
+                                   text=True, 
+                                   timeout=10)
+            
+        elif language == 'java':
+            # For Java, we need to extract the class name and compile first
+            class_name = extract_java_class_name(file_path)
+            compile_result = subprocess.run(['javac', file_path], 
+                                           capture_output=True, 
+                                           text=True, 
+                                           timeout=10)
+            
+            if compile_result.returncode != 0:
+                return f"Compilation Error:\n{compile_result.stderr}"
+            
+            # Run the compiled Java class
+            dir_path = os.path.dirname(file_path)
+            result = subprocess.run(['java', '-cp', dir_path, class_name], 
+                                   capture_output=True, 
+                                   text=True, 
+                                   timeout=10)
+            
+        elif language == 'c':
+            # Compile C code
+            output_path = file_path.replace('.c', '.exe')
+            compile_result = subprocess.run(['gcc', file_path, '-o', output_path], 
+                                           capture_output=True, 
+                                           text=True, 
+                                           timeout=10)
+            
+            if compile_result.returncode != 0:
+                return f"Compilation Error:\n{compile_result.stderr}"
+            
+            # Run the compiled executable
+            result = subprocess.run([output_path], 
+                                   capture_output=True, 
+                                   text=True, 
+                                   timeout=10)
+            
+            # Clean up the executable
+            try:
+                os.unlink(output_path)
+            except:
+                pass
+        else:
+            return "Unsupported language"
+        
+        # Combine stdout and stderr
+        output = result.stdout
+        if result.returncode != 0:
+            output += f"\nError (exit code {result.returncode}):\n{result.stderr}"
+        
+        return output
+    
+    except subprocess.TimeoutExpired:
+        return "Execution timed out (limit: 10 seconds)"
+    except Exception as e:
+        return f"Execution error: {str(e)}"
+
+def extract_java_class_name(file_path):
+    """Extract the public class name from Java code"""
+    with open(file_path, 'r') as file:
+        content = file.read()
+    
+    # Simple regex to find the class name
+    import re
+    match = re.search(r'public\s+class\s+(\w+)', content)
+    if match:
+        return match.group(1)
+    return "Main"  # Default class name
