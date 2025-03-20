@@ -208,54 +208,29 @@ def run_code(file_path, language):
         if language == 'java':
             # Create a dedicated directory for Java files
             temp_dir = tempfile.mkdtemp()
+            java_file_path = os.path.join(temp_dir, 'Solution.java')
             
-            # Use jdk.tools API for compilation
+            # Copy code to the new file
+            with open(file_path, 'r') as source, open(java_file_path, 'w') as target:
+                target.write(source.read())
+            
+            # Run Java directly using the java command
             try:
-                from jdk.tools.jshell import JShell
-                jshell = JShell.create()
+                result = subprocess.run(
+                    ['java', java_file_path],
+                    capture_output=True,
+                    text=True,
+                    timeout=30
+                )
                 
-                # Read the Java code
-                with open(file_path, 'r') as file:
-                    code = file.read()
+                output = result.stdout
+                if result.returncode != 0:
+                    output += f"\nError:\n{result.stderr}"
                 
-                # Execute the code using JShell
-                result = jshell.eval(code)
-                output = ""
-                
-                # Process the results
-                for event in result:
-                    if event.value() is not None:
-                        output += str(event.value()) + "\n"
-                
-                jshell.close()
                 return output
                 
-            except ImportError:
-                # Fallback to using Java Runtime
-                java_file_path = os.path.join(temp_dir, 'Solution.java')
-                class_file_path = os.path.join(temp_dir, 'Solution.class')
-                
-                with open(file_path, 'r') as source, open(java_file_path, 'w') as target:
-                    target.write(source.read())
-                
-                # Use Java Runtime directly
-                java_home = os.environ.get('JAVA_HOME')
-                if java_home:
-                    rt_jar = os.path.join(java_home, 'lib', 'rt.jar')
-                    if os.path.exists(rt_jar):
-                        classpath = f"{rt_jar};{temp_dir}"
-                        
-                        result = subprocess.run(
-                            ['java', '-cp', classpath, 'Solution'],
-                            capture_output=True,
-                            text=True,
-                            timeout=30
-                        )
-                        
-                        return result.stdout if result.returncode == 0 else f"Error:\n{result.stderr}"
-                
-                return "Error: Java Runtime not found. Please ensure Java is properly installed."
-            
+            except FileNotFoundError:
+                return "Error: Java is not installed or not in system PATH. Please install Java to run Java code."
             finally:
                 # Clean up
                 try:
