@@ -198,88 +198,15 @@ def get_file_extension(language):
     """Get the appropriate file extension for the language"""
     extensions = {
         'python': '.py',
-        'java': '.java',
         'c': '.c'
     }
     return extensions.get(language, '.txt')
 
 def run_code(file_path, language):
     try:
-        if language == 'java':
-            # Create a dedicated directory for Java files
-            temp_dir = tempfile.mkdtemp()
-            java_file_path = os.path.join(temp_dir, 'Solution.java')
-            
-            # Copy code to the new file
-            with open(file_path, 'r') as source, open(java_file_path, 'w') as target:
-                target.write(source.read())
-            
-            # Use absolute path to Java
-            java_path = r"C:\Program Files\Microsoft\jdk-17.0.9.8-hotspot\bin\java.exe"
-            javac_path = r"C:\Program Files\Microsoft\jdk-17.0.9.8-hotspot\bin\javac.exe"
-            
-            # Compile Java code
-            try:
-                compile_result = subprocess.run(
-                    [javac_path, java_file_path],
-                    capture_output=True,
-                    text=True,
-                    timeout=30
-                )
-                
-                if compile_result.returncode != 0:
-                    return f"Compilation Error:\n{compile_result.stderr}"
-                
-                # Run the compiled class
-                result = subprocess.run(
-                    [java_path, '-cp', temp_dir, 'Solution'],
-                    capture_output=True,
-                    text=True,
-                    timeout=30
-                )
-                
-                output = result.stdout
-                if result.returncode != 0:
-                    output += f"\nError:\n{result.stderr}"
-                
-                return output
-                
-            except FileNotFoundError:
-                return "Error: Java installation not found at expected location. Please verify Java installation."
-            finally:
-                # Clean up
-                try:
-                    shutil.rmtree(temp_dir)
-                except:
-                    pass
-        
-        elif language == 'python':
+        if language == 'python':
             # Run Python code
             result = subprocess.run(['python', file_path], 
-                                   capture_output=True, 
-                                   text=True, 
-                                   timeout=10)
-            
-        elif language == 'java':
-            # Check if javac is installed
-            try:
-                subprocess.run(['javac', '-version'], capture_output=True, check=True)
-            except (subprocess.SubprocessError, FileNotFoundError):
-                return "Error: Java compiler (javac) is not installed on the server. Please try Python code instead."
-            
-            # For Java, we need to extract the class name and compile first
-            class_name = extract_java_class_name(file_path)
-            compile_result = subprocess.run(['javac', file_path], 
-                                           capture_output=True, 
-                                           text=True, 
-                                           timeout=10)
-            
-            if compile_result.returncode != 0:
-                return f"Compilation Error:\n{compile_result.stderr}"
-            
-            # Run the compiled Java class
-            dir_path = os.path.dirname(file_path)
-            result = subprocess.run(['java', '-cp', dir_path, class_name], 
                                    capture_output=True, 
                                    text=True, 
                                    timeout=10)
@@ -326,18 +253,3 @@ def run_code(file_path, language):
         return "Execution timed out (limit: 30 seconds)"
     except Exception as e:
         return f"Execution error: {str(e)}"
-
-def extract_java_class_name(file_path):
-    """Extract the public class name from Java code"""
-    with open(file_path, 'r') as file:
-        content = file.read()
-    
-    # Enhanced regex to handle more complex class declarations
-    import re
-    # Look for public class with optional generic types and annotations
-    pattern = r'public\s+class\s+(\w+)(?:<[^>]+>)?\s*(?:extends\s+\w+(?:<[^>]+>)?)?\s*(?:implements\s+(?:\w+(?:<[^>]+>)?(?:\s*,\s*\w+(?:<[^>]+>)?)*))?\s*{'
-    match = re.search(pattern, content)
-    
-    if match:
-        return match.group(1)
-    return "Solution"  # Default class name
