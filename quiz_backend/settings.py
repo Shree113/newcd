@@ -33,9 +33,12 @@ INSTALLED_APPS = [
 
 # Update CORS settings
 CORS_ALLOWED_ORIGINS = [
-    "http://localhost:5173",
-    "https://new-frontend-ashen.vercel.app",  # Your Vercel domain will go here
+    "https://new-qqm87blfe-shrees-projects-f9c3914c.vercel.app",  # ✅ Your frontend URL
 ]
+
+CORS_ALLOW_METHODS = ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
+
+CORS_ALLOW_HEADERS = ["*"]
 
 CORS_ALLOW_CREDENTIALS = True
 
