@@ -16,6 +16,7 @@ class Student(models.Model):
 
 class Question(models.Model):
     text = models.TextField()
+    code_snippet = models.TextField(blank=True, null=True)  # Add this line
     option_a = models.CharField(max_length=255)
     option_b = models.CharField(max_length=255)
     option_c = models.CharField(max_length=255)

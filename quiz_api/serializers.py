@@ -10,7 +10,7 @@ class StudentSerializer(serializers.ModelSerializer):
 class QuestionSerializer(serializers.ModelSerializer):
     class Meta:
         model = Question
-        fields = '__all__'
+        fields = ['id', 'text', 'code_snippet', 'option_a', 'option_b', 'option_c', 'option_d', 'correct_option']
 
 
 class StudentAnswerSerializer(serializers.ModelSerializer):

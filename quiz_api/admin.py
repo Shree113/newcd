@@ -29,6 +29,14 @@ class LeaderboardAdmin(admin.ModelAdmin):
 @admin.register(Question)
 class QuestionAdmin(admin.ModelAdmin):
     list_display = ('text', 'correct_option')
+    fieldsets = (
+        ('General', {
+            'fields': ('text', 'code_snippet')
+        }),
+        ('Options', {
+            'fields': ('option_a', 'option_b', 'option_c', 'option_d', 'correct_option')
+        }),
+    )
 
 
 @admin.register(StudentAnswer)
