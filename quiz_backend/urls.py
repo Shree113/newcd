@@ -20,6 +20,8 @@ from django.http import HttpResponse
 from quiz_api.views import complete_quiz, superuser_login
 from django.contrib.auth.decorators import login_required
 from quiz_api import views
+from .views import compile_code
+
 
 def home(request):
     return HttpResponse("Welcome to the Quiz App!")
@@ -36,4 +38,6 @@ urlpatterns = [
     path('api/delete-student/<int:pk>/', views.delete_student, name='delete_student'),
     path('api/login/', superuser_login, name='superuser_login'),  # ✅ Superuser login
     path('api/complete-quiz/', complete_quiz, name='complete_quiz'), 
+    path('compile/', compile_code, name='compile_code'),  
+
 ]
