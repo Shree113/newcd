@@ -20,7 +20,9 @@ class Question(models.Model):
     option_b = models.CharField(max_length=255)
     option_c = models.CharField(max_length=255)
     option_d = models.CharField(max_length=255)
-    correct_option = models.CharField(max_length=1)  # 'A', 'B', 'C', or 'D'
+    correct_option = models.CharField(max_length=1)
+    is_code_question = models.BooleanField(default=False)  # New field to identify code questions
+    code_language = models.CharField(max_length=50, blank=True, null=True)  # Language for syntax highlighting
 
     def __str__(self):
         return self.text
