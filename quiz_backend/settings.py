@@ -33,7 +33,7 @@ INSTALLED_APPS = [
 
 # Update CORS settings
 CORS_ALLOWED_ORIGINS = [
-    "https://new-fd.vercel.app",  # ✅ Your frontend URL
+    "https://codeverse-2k25.vercel.app",  # ✅ Your frontend URL
 ]
 
 CORS_ALLOW_METHODS = ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
