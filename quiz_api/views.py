@@ -167,89 +167,143 @@ def compile_code(request):
     """
     Compile and run code in various languages
     """
+    temp_file_path = None
+    temp_dir = None
+
     try:
         data = json.loads(request.body)
         code = data.get('code', '')
         language = data.get('language', 'python')
-        
+
         if not code:
             return Response({'error': 'No code provided'}, status=status.HTTP_400_BAD_REQUEST)
-        
-        # Create a temporary file for the code
-        with tempfile.NamedTemporaryFile(suffix=get_file_extension(language), delete=False) as temp_file:
-            temp_file.write(code.encode())
-            temp_file_path = temp_file.name
-        
+
+        if language == 'java':
+            temp_dir = tempfile.mkdtemp()
+            temp_file_path = os.path.join(temp_dir, 'Main.java')
+            with open(temp_file_path, 'w', encoding='utf-8') as temp_file:
+                temp_file.write(code)
+        else:
+            with tempfile.NamedTemporaryFile(suffix=get_file_extension(language), delete=False, mode='w', encoding='utf-8') as temp_file:
+                temp_file.write(code)
+                temp_file_path = temp_file.name
+
         # Compile and run the code
         result = run_code(temp_file_path, language)
-        
-        # Clean up the temporary file
-        try:
-            os.unlink(temp_file_path)
-        except:
-            pass
-        
+
         return Response({'output': result})
-    
+
     except Exception as e:
         return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    finally:
+        if temp_file_path and os.path.exists(temp_file_path):
+            try:
+                os.unlink(temp_file_path)
+            except:
+                pass
+
+        if language == 'java' and temp_dir and os.path.isdir(temp_dir):
+            try:
+                # Clean up class files if any were generated
+                class_file = os.path.join(temp_dir, 'Main.class')
+                if os.path.exists(class_file):
+                    os.unlink(class_file)
+            except:
+                pass
+
+            try:
+                os.rmdir(temp_dir)
+            except:
+                pass
+
 
 def get_file_extension(language):
     """Get the appropriate file extension for the language"""
     extensions = {
         'python': '.py',
-        'c': '.c'
+        'c': '.c',
+        'java': '.java'
     }
     return extensions.get(language, '.txt')
+
 
 def run_code(file_path, language):
     try:
         if language == 'python':
-            # Run Python code
-            result = subprocess.run(['python', file_path], 
-                                   capture_output=True, 
-                                   text=True, 
-                                   timeout=10)
-            
+            result = subprocess.run(['python', file_path],
+                                    capture_output=True,
+                                    text=True,
+                                    timeout=10)
+
         elif language == 'c':
-            # Check if gcc is installed
             try:
                 subprocess.run(['gcc', '--version'], capture_output=True, check=True)
             except (subprocess.SubprocessError, FileNotFoundError):
-                return "Error: C compiler (gcc) is not installed on the server. Please try Python code instead."
-                
-            # Compile C code
+                return 'Error: C compiler (gcc) is not installed on the server. Please try Python code instead.'
+
             output_path = file_path.replace('.c', '.exe')
-            compile_result = subprocess.run(['gcc', file_path, '-o', output_path], 
-                                           capture_output=True, 
-                                           text=True, 
-                                           timeout=10)
-            
+            compile_result = subprocess.run(['gcc', file_path, '-o', output_path],
+                                            capture_output=True,
+                                            text=True,
+                                            timeout=10)
+
             if compile_result.returncode != 0:
-                return f"Compilation Error:\n{compile_result.stderr}"
-            
-            # Run the compiled executable
-            result = subprocess.run([output_path], 
-                                   capture_output=True, 
-                                   text=True, 
-                                   timeout=10)
-            
-            # Clean up the executable
+                return f'Compilation Error:\n{compile_result.stderr}'
+
+            result = subprocess.run([output_path],
+                                    capture_output=True,
+                                    text=True,
+                                    timeout=10)
+
             try:
                 os.unlink(output_path)
             except:
                 pass
+
+        elif language == 'java':
+            try:
+                subprocess.run(['javac', '-version'], capture_output=True, check=True)
+            except (subprocess.SubprocessError, FileNotFoundError):
+                return 'Error: Java compiler (javac) is not installed on the server. Please install Java JDK to use this feature.'
+
+            working_dir = os.path.dirname(file_path)
+
+            compile_result = subprocess.run(['javac', file_path],
+                                            capture_output=True,
+                                            text=True,
+                                            timeout=20,
+                                            cwd=working_dir)
+
+            if compile_result.returncode != 0:
+                return f'Compilation Error:\n{compile_result.stderr}'
+
+            class_name = os.path.splitext(os.path.basename(file_path))[0]
+
+            result = subprocess.run(['java', '-cp', working_dir, class_name],
+                                    capture_output=True,
+                                    text=True,
+                                    timeout=20,
+                                    cwd=working_dir)
+
+            # Clean compiled class
+            try:
+                class_file = os.path.join(working_dir, f'{class_name}.class')
+                if os.path.exists(class_file):
+                    os.unlink(class_file)
+            except:
+                pass
+
         else:
-            return "Unsupported language"
-        
-        # Combine stdout and stderr
+            return 'Unsupported language'
+
         output = result.stdout
         if result.returncode != 0:
-            output += f"\nError (exit code {result.returncode}):\n{result.stderr}"
-        
+            output += f'\nError (exit code {result.returncode}):\n{result.stderr}'
+
         return output
-    
+
     except subprocess.TimeoutExpired:
-        return "Execution timed out (limit: 30 seconds)"
+        return 'Execution timed out (limit: 30 seconds)'
     except Exception as e:
-        return f"Execution error: {str(e)}"
+        return f'Execution error: {str(e)}'
